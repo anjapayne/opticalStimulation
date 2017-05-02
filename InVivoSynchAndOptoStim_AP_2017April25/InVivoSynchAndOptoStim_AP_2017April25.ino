@@ -16,7 +16,6 @@ int buttonState3 = 0;
 
 int programState = 0;
 
-
 /* Stimulation Variables */
 unsigned long timeCurrent;                             // Variable for storing the current time
 unsigned long timeDelta;                               // Variable for storing the time difference between turning on the LED and timeCurrent
@@ -26,10 +25,17 @@ unsigned long intervalStart;               // Declares an array of zeroes to hol
 
 
 /// Sync Pulser Variables
+// constants won't change:
 #define DELAY 60 //60 MS delay between pulses
 #define SIGNAL_PIN LED_BUILTIN
 #define ANALOG_PIN A11
+const long interval = 1000;           // interval at which to blink (milliseconds)
+
+// variables will change:
 int Q = 1;
+unsigned long previousMillisOn = 0; // will store last time LED was updated
+unsigned long previousMillisOff = 0; // will store last time LED was updated
+unsigned long previousMillis2 = 0; // will store last time LED was updated
 
 void setup() {
   // initialize the LED pin as an output:
@@ -108,7 +114,7 @@ void runProcess3(){
   analogWrite(ledPin1, 0);
   analogWrite(ledPin2, 0);
 
-  // Nuclear Option Goes HERE
+  // Process 3 Goes Here
   optostim(0.5, 100.0);
 }
 
@@ -117,7 +123,7 @@ void optostim(float freq, float width) {
   timeCurrent = millis();                                  // millis() calls the time for the start of each LED stimulation
 
   int on = width;
-  int off = on; //(1000/freq) - width;
+  int off = (1000/freq) - width;
   
   timeDelta = timeCurrent - intervalStart;    // Stores the change in time for the current LED
   if (timeDelta >= off && LEDstate == 0) { // If the elapsed time has exceeded the time an LED should be off and the LED is off, turn LED on
@@ -133,27 +139,56 @@ void optostim(float freq, float width) {
 
 
 void syncPulser() {
-  pulse(Q);
-  Q += 1;
-  delay(1000);
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillisOn < 500) {
+    pulse(Q);
+    Q += 1;  
+  }
+
+
+  if (currentMillis - previousMillisOn >= 4000) {
+    // save the last time you blinked the LED
+    //previousMillisOn = currentMillisOn; 
+    //currentMillisOn = 0;
+    digitalWrite(SIGNAL_PIN, LOW);
+    tone(ANALOG_PIN, 294);
+  }
+  //delay(1000);
+
   
-  digitalWrite(SIGNAL_PIN, HIGH);
-  tone(ANALOG_PIN, 294);
-  delay(1000);
+  if (currentMillis - previousMillisOn >= 8000 && currentMillis - previousMillisOn < 12000) {
+    // save the last time you blinked the LED
+    //currentMillisOff = 0;
+    digitalWrite(SIGNAL_PIN, HIGH);
+    noTone(ANALOG_PIN); 
+  }
+  if (currentMillis - previousMillisOn <= 12000){
+    previousMillisOn = currentMillis;
+  }
   
   digitalWrite(SIGNAL_PIN, LOW);
   noTone(ANALOG_PIN);
+
+  //delay(1000);
+
 }
 
 
 void pulse(unsigned int n) {
   String bin_string = int_to_bin_str(n);
+  unsigned long currentMillis2 = millis();
   
   for(int i = 0; i < bin_string.length(); i++) {
     boolean pin_state = (bin_string[i] == '1');
     digitalWrite(SIGNAL_PIN, pin_state);
     toggle_tone(pin_state);
-    delay(DELAY);
+    //if (currentMillis2 - previousMillis2 >= DELAY) {
+      // save the last time you blinked the LED
+      //previousMillis2 = currentMillis2; 
+    //}
+    
+    delay(DELAY); //commenting out but note, this may need to be added back in pending verification tests
       
   }
   digitalWrite(SIGNAL_PIN, LOW);
